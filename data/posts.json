@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "updatedAt": "2026-11-16T13:40:00.000Z",
+  "updatedBy": "",
+  "posts": [
+    {
+      "id": "p01glofers",
+      "title": "Glofers integrados en equipos globales",
+      "format": "Slider",
+      "status": "revision",
+      "channels": [
+        "ig",
+        "li"
+      ],
+      "date": "",
+      "media": [],
+      "driveUrl": "",
+      "copyEs": "Nuestros Glofers residen en América Latina y están totalmente integrados en equipos de Estados Unidos, España, Canadá y Alemania, coordinando a diario los horarios de trabajo, los sprints y los objetivos con sus clientes.\nHacemos posible esa conexión, para que las empresas globales puedan crecer con talento de alto nivel procedente de América Latina y operar como un solo equipo.",
+      "copyEn": "Our Glofers are based in Latin America and are fully integrated into teams in the United States, Spain, Canada, and Germany, coordinating work schedules, sprints, and goals with their clients on a daily basis.\nWe make that connection possible, so that global companies can grow with senior talent from Latin America and operate as a single team.",
+      "note": "",
+      "updatedAt": "2026-11-16T13:39:00.000Z",
+      "createdAt": "2026-11-16T13:39:00.000Z"
+    },
+    {
+      "id": "p02token",
+      "title": "Costo por token",
+      "format": "Reel",
+      "status": "revision",
+      "channels": [
+        "ig",
+        "li"
+      ],
+      "date": "",
+      "media": [],
+      "driveUrl": "",
+      "copyEs": "Antes, el debate giraba en torno al agua y la energía. Ahora se trata del costo por token.\n\nLa IA tiene un costo operativo, y la forma en que redactamos una instrucción determina a cuánto asciende ese costo. \nEsa es la conversación que se está dando en este momento dentro de los equipos y con nuestros clientes.\n\nDesde Glofy conectamos a las organizaciones con los profesionales de alto nivel que cuentan con una mirada global.\nglofy.co/jobs",
+      "copyEn": "Previously, the debate centered on water and energy. Now it’s about the cost per token.\n\nAI has an operational cost, and the way we phrase an instruction determines how much that cost amounts to.\nThat’s the conversation taking place right now within our teams and with our clients.\n\nAt Glofy, we connect organizations with top-tier professionals who have a global perspective.\nglofy.co/jobs",
+      "note": "",
+      "updatedAt": "2026-11-16T13:38:00.000Z",
+      "createdAt": "2026-11-16T13:38:00.000Z"
+    },
+    {
+      "id": "p03welcomekit",
+      "title": "Welcome kit",
+      "format": "Animación",
+      "status": "revision",
+      "channels": [
+        "ig",
+        "li"
+      ],
+      "date": "",
+      "media": [],
+      "driveUrl": "",
+      "copyEs": "El welcome kit es solo la parte visible. Lo que viene con él es lo que define el puesto: colaborar con clientes globales, retos técnicos de alto nivel, un proceso de incorporación estructurado y colaboración en tiempo real con equipos de Estados Unidos y Europa.\n\nUnirse a Glofy significa formar parte de una organización profesional creada para integrar a talentos de Latinoamérica en equipos globales.",
+      "copyEn": "The welcome kit is the visible part. What comes with it is what defines the role: a portfolio of global clients, senior-level technical challenges, a structured onboarding process, and real-time collaboration with teams across the US and Europe.\n\nJoining Glofy means becoming part of a professional organization built to integrate senior LATAM talent into global teams.",
+      "note": "",
+      "updatedAt": "2026-11-16T13:37:00.000Z",
+      "createdAt": "2026-11-16T13:37:00.000Z"
+    },
+    {
+      "id": "p04jobschecker",
+      "title": "Búsquedas abiertas + simulador de entrevistas",
+      "format": "Reel",
+      "status": "revision",
+      "channels": [
+        "ig",
+        "li"
+      ],
+      "date": "",
+      "media": [],
+      "driveUrl": "",
+      "copyEs": "Si estás buscando trabajo o simplemente querés ser parte de una simulación de entrevistas con preguntas pertinentes y de valor, te compartimos estas opciones:\nOpen positions → glofy.co/jobs\nFree interview simulation → glofy.co/checker",
+      "copyEn": "If you're looking for a job or simply want to take part in a mock interview with relevant and valuable questions, here are some options:\nOpen positions → glofy.co/jobs\nFree mock interview → glofy.co/checker",
+      "note": "",
+      "updatedAt": "2026-11-16T13:36:00.000Z",
+      "createdAt": "2026-11-16T13:36:00.000Z"
+    },
+    {
+      "id": "p05seniorcloud",
+      "title": "Talent pool Senior Cloud",
+      "format": "Slider",
+      "status": "revision",
+      "channels": [
+        "ig",
+        "li"
+      ],
+      "date": "",
+      "media": [],
+      "driveUrl": "",
+      "copyEs": "En Glofy, estamos ampliando nuestro talent pool con perfiles Senior cloud para apoyar a empresas globales que están ampliando sus operaciones de inteligencia artificial, multi-cloud y de eficiencia de costos.\n\nApply now! | glofy.co",
+      "copyEn": "At Glofy, we are expanding our talent pool with senior cloud leadership profiles to support global companies scaling AI, multi-cloud and cost-efficient operations.\n\nApply now! | glofy.co",
+      "note": "",
+      "updatedAt": "2026-11-16T13:35:00.000Z",
+      "createdAt": "2026-11-16T13:35:00.000Z"
+    }
+  ]
+}
