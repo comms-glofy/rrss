@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-16T14:12:36.929Z",
-  "updatedBy": "comms-glofy",
+  "updatedAt": "2026-11-16T13:40:00.000Z",
+  "updatedBy": "",
   "posts": [
     {
       "id": "p01glofers",
@@ -13,17 +13,12 @@
         "li"
       ],
       "date": "",
-      "media": [
-        "https://drive.google.com/file/d/1Fy27fQR033KEiyx47XHBD-sX4dQfB0CG/view?usp=drive_link",
-        "https://drive.google.com/file/d/1kpL-yaLqWp4P3pL1-2qH-XYg78g03oiu/view?usp=drive_link",
-        "https://drive.google.com/file/d/1GifGmcJv2avUjDWro0XUOlfRxUXX6Zdd/view?usp=drive_link",
-        "https://drive.google.com/file/d/1g1zoqQ5Ltz29LLMhPlD9H-PqO9AZWuid/view?usp=drive_link"
-      ],
-      "driveUrl": "https://drive.google.com/drive/folders/1h5pv2yV4EksJYeObg73ka_Np2AUaACZj?usp=drive_link",
-      "copyEs": "En Glofy, trabajamos nos encargamos de::\n→ Buscar talento de alto nivel en toda América Latina\n→ Evaluar previamente a cada candidato\n→ Te ayudamos a integrarlos en tu equipo\n\nEl resultado son profesionales con un inglés sólido, que trabajan en tu horario, sujetos a los mismos estándares y con una estructura de costos más eficiente.",
-      "copyEn": "At Glofy, we works as an extension of your hiring capacity:\n→ We source senior talent across Latin America\n→ We pre-vet every candidate before they reach you\n→ We help you integrate them into your team\nThe outcome: professionals with strong English, working your hours, held to the same standards, at a more efficient cost structure.",
+      "media": [],
+      "driveUrl": "",
+      "copyEs": "Nuestros Glofers residen en América Latina y están totalmente integrados en equipos de Estados Unidos, España, Canadá y Alemania, coordinando a diario los horarios de trabajo, los sprints y los objetivos con sus clientes.\nHacemos posible esa conexión, para que las empresas globales puedan crecer con talento de alto nivel procedente de América Latina y operar como un solo equipo.",
+      "copyEn": "Our Glofers are based in Latin America and are fully integrated into teams in the United States, Spain, Canada, and Germany, coordinating work schedules, sprints, and goals with their clients on a daily basis.\nWe make that connection possible, so that global companies can grow with senior talent from Latin America and operate as a single team.",
       "note": "",
-      "updatedAt": "2026-11-16T14:12:36.403Z",
+      "updatedAt": "2026-11-16T13:39:00.000Z",
       "createdAt": "2026-11-16T13:39:00.000Z"
     },
     {
