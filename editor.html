@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Editor · Calendario RRSS · Glofy</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="https://raw.githubusercontent.com/comms-glofy/glofy-assets/refs/heads/main/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-mode="edit">
+<header class="topbar gutter">
+  <div class="inner">
+    <img class="logo" src="https://raw.githubusercontent.com/comms-glofy/glofy-assets/refs/heads/main/logo-rebrand-glofy.png" alt="Glofy">
+    <span class="sep"></span>
+    <h1>Calendario RRSS</h1>
+    <span class="grow"></span>
+    <span class="role" id="role">Cargando…</span>
+    <a class="tlink" href="./" target="_blank" rel="noopener">Ver como gerencia ↗</a>
+    <button class="btn ghost sm" id="logoutBtn" hidden>Desconectar</button>
+    <button class="btn lime" id="newBtn" hidden>+ Nuevo posteo</button>
+  </div>
+</header>
+<main class="gutter">
+  <div class="inner">
+    <div class="toolbar">
+      <h2>Próximos posteos</h2>
+      <span class="updated" id="updated"></span>
+      <span class="grow"></span>
+      <div class="seg" role="group" aria-label="Canal">
+        <button data-ch="all" aria-pressed="true">Todos</button>
+        <button data-ch="ig" aria-pressed="false">Instagram</button>
+        <button data-ch="li" aria-pressed="false">LinkedIn</button>
+      </div>
+      <button class="btn sm" id="refreshBtn">Actualizar</button>
+    </div>
+    <div id="alert"></div>
+    <div class="pipeline" id="pipeline"></div>
+    <p class="scope-note" id="scopeNote"></p>
+    <div id="content"></div>
+  </div>
+</main>
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-hidden="true" role="dialog" aria-label="Detalle del posteo"></aside>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="assets/app.js"></script>
+</body>
+</html>
