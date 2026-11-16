@@ -1,8 +1,9 @@
-/* Glofy · Calendario RRSS
+/* Glofy · Dashboard RRSS
    Una sola lógica para las dos páginas:
-   - index.html  (data-mode="view")  → vista de gerencia, solo lectura.
+   - index.html  (data-mode="view")  → dashboard de gerencia: solo muestra lo que está "En revisión".
    - editor.html (data-mode="edit")  → edición de Comms, guarda en GitHub con un token personal.
-   La fuente de verdad es data/posts.json en el repo comms-glofy/rrss. */
+   La fuente de verdad es data/posts.json en el repo comms-glofy/rrss.
+   El feedback de gerencia llega por Slack; Comms actualiza el estado desde el editor. */
 
 const REPO = { owner: "comms-glofy", repo: "rrss", branch: "main", path: "data/posts.json" };
 const API_FILE = `https://api.github.com/repos/${REPO.owner}/${REPO.repo}/contents/${REPO.path}`;
@@ -11,16 +12,21 @@ const TOKEN_KEY = "rrss-gh-token";
 const MODE = document.body.dataset.mode === "edit" ? "edit" : "view";
 
 const STATUSES = [
-  { k: "borrador", l: "Borrador", c: "--st-borrador" },
   { k: "revision", l: "En revisión", c: "--st-revision" },
   { k: "cambios", l: "Cambios pedidos", c: "--st-cambios" },
   { k: "aprobado", l: "Aprobado", c: "--st-aprobado" },
   { k: "publicado", l: "Publicado", c: "--st-publicado" }];
 const ST = Object.fromEntries(STATUSES.map(s => [s.k, s]));
-const ORDER = ["revision", "cambios", "aprobado", "borrador", "publicado"];
-const GROUP_SUB = { revision: "Esperan la revisión de gerencia", cambios: "Comms está ajustando", aprobado: "Listos para publicar", borrador: "En preparación", publicado: "Ya salieron" };
+const ORDER = ["revision", "cambios", "aprobado", "publicado"];
+const GROUP_SUB = { revision: "Gerencia los ve en el dashboard", cambios: "Ajustando según el feedback", aprobado: "Listos para publicar", publicado: "Ya salieron" };
+/* Cualquier estado desconocido o viejo (p. ej. "borrador") se trata como "En revisión". */
+const stOf = p => ST[p.status] ? p.status : "revision";
 const FORMATS = ["Slider", "Reel", "Animación", "Carrusel", "Estático", "Historia", "Video"];
-const LIMITS = { ig: 2200, li: 3000 };
+const CHANNELS = [{ k: "ig", l: "Instagram", s: "IG", lang: "ES" }, { k: "li", l: "LinkedIn", s: "IN", lang: "EN" }, { k: "tt", l: "TikTok", s: "TT", lang: "ES" }];
+const CH = Object.fromEntries(CHANNELS.map(c => [c.k, c]));
+const LIMITS = { ig: 2200, li: 3000, tt: 4000 };
+/* TikTok usa su propio copy si lo tiene; si no, el de Instagram. */
+const copyFor = (p, ch) => ch === "li" ? (p.copyEn || "") : ch === "tt" ? (p.copyTt || p.copyEs || "") : (p.copyEs || "");
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -70,7 +76,7 @@ async function load() {
     try { res = await fetchFile(); }
     catch (e) {
       if (isEdit()) throw e;
-      // Vista de gerencia: si la API no responde (p. ej. límite por hora), uso la copia publicada en Pages.
+      // Dashboard de gerencia: si la API no responde (p. ej. límite por hora), uso la copia publicada en Pages.
       const r = await fetch("data/posts.json?_=" + Date.now(), { cache: "no-store" });
       if (!r.ok) throw e;
       res = { data: await r.json(), sha: null };
@@ -111,7 +117,7 @@ function saveErr(e) {
 /* ---------- Matriz 2026 (solo editor) ---------- */
 function linkify(text) { return esc(text).replace(/((?:https?:\/\/)?(?:[\w-]+\.)*glofy\.co(?:\/[\w\-\/?=&#.]*)?)/gi, '<span class="lnk">$1</span>'); }
 function matrixChecks(p) {
-  const all = (p.copyEs || "") + "\n" + (p.copyEn || ""); const out = [];
+  const all = [p.copyEs, p.copyEn, p.copyTt].filter(Boolean).join("\n"); const out = [];
   const emoji = /\p{Extended_Pictographic}/u.test(all);
   out.push({ ok: !emoji, t: emoji ? "Tiene emojis. La Matriz 2026 no los usa." : "Sin emojis." });
   const q = /¿\s*sab[ií]as\s+que|did you know/i.test(all);
@@ -119,7 +125,8 @@ function matrixChecks(p) {
   const cta = /glofy\.co/i.test(all);
   out.push({ ok: cta, t: cta ? "El CTA dirige a glofy.co." : "No hay CTA a glofy.co (jobs, checker o web)." });
   const ch = p.channels || [];
-  if (ch.includes("ig") && !p.copyEs || ch.includes("li") && !p.copyEn) out.push({ ok: false, t: "Falta el copy de uno de los canales marcados." });
+  if (!ch.length) out.push({ ok: false, t: "No tiene ningún canal marcado." });
+  if (ch.some(c => !copyFor(p, c))) out.push({ ok: false, t: "Falta el copy de uno de los canales marcados." });
   if (!mediaList(p).length) out.push({ ok: false, t: "No hay links a las piezas: gerencia no va a ver la vista previa." });
   return out;
 }
@@ -128,42 +135,55 @@ function matrixChecks(p) {
 const chOk = p => S.ch === "all" || (p.channels || []).includes(S.ch);
 const sorted = () => [...S.posts].sort((a, b) => (a.date && b.date) ? a.date.localeCompare(b.date) : a.date ? -1 : b.date ? 1 : (b.updatedAt || "").localeCompare(a.updatedAt || ""));
 function render() {
-  document.querySelectorAll("[data-ch]").forEach(b => b.setAttribute("aria-pressed", b.dataset.ch === S.ch));
   $("#updated").textContent = S.updatedAt ? "Actualizado " + fmtStamp.format(new Date(S.updatedAt)) : "";
+  return isEdit() ? renderEditBoard() : renderReviewBoard();
+}
+/* Dashboard de gerencia: solo lo que está En revisión. Sin nada pendiente, queda vacío. */
+function renderReviewBoard() {
+  const c = $("#content");
+  if (S.err) { c.innerHTML = `<div class="state"><h3>${esc(S.err.t)}</h3><p>${esc(S.err.d)}</p><button class="btn" data-act="reload">Actualizar</button></div>`; $("#scopeNote").textContent = ""; return; }
+  if (!S.loaded) { c.innerHTML = `<div class="state"><h3>Cargando…</h3><p>Trayendo los posteos para revisar.</p></div>`; return; }
+  const ps = sorted().filter(p => stOf(p) === "revision");
+  $("#scopeNote").textContent = ps.length ? `${ps.length} ${ps.length === 1 ? "posteo para revisar" : "posteos para revisar"}.` : "";
+  c.innerHTML = ps.length
+    ? `<div class="cards">${ps.map(cardHTML).join("")}</div>`
+    : `<div class="state"><h3>No hay posteos para revisar</h3><p>Cuando Comms cargue contenido nuevo, aparece acá.</p></div>`;
+}
+function renderEditBoard() {
+  document.querySelectorAll("[data-ch]").forEach(b => b.setAttribute("aria-pressed", b.dataset.ch === S.ch));
   const list = sorted().filter(chOk);
-  const counts = Object.fromEntries(STATUSES.map(s => [s.k, list.filter(p => p.status === s.k).length]));
+  const counts = Object.fromEntries(STATUSES.map(s => [s.k, list.filter(p => stOf(p) === s.k).length]));
   $("#pipeline").innerHTML = STATUSES.map(s => `<button class="stage" style="--c:var(${s.c})" data-st="${s.k}" aria-pressed="${S.status === s.k}"><span class="l"><i></i>${s.l}</span><span class="n">${S.loaded ? counts[s.k] : "–"}</span></button>`).join("");
-  $("#scopeNote").textContent = S.loaded ? `${list.length} ${list.length === 1 ? "posteo" : "posteos"}${S.ch !== "all" ? ` en ${S.ch === "ig" ? "Instagram" : "LinkedIn"}` : ""}${S.status !== "all" ? ` · filtrando por “${ST[S.status].l}”, tocá de nuevo para quitar el filtro` : ""}.` : "";
-  const pend = counts.revision;
-  $("#alert").innerHTML = S.loaded && pend && !isEdit() && S.status !== "revision"
-    ? `<div class="alert"><span class="grow"><strong>${pend} ${pend === 1 ? "posteo espera" : "posteos esperan"} revisión.</strong></span><button class="btn lime sm" data-st="revision">Ver pendientes</button></div>` : "";
+  $("#scopeNote").textContent = S.loaded ? `${list.length} ${list.length === 1 ? "posteo" : "posteos"}${S.ch !== "all" ? ` en ${CH[S.ch].l}` : ""}${S.status !== "all" ? ` · filtrando por “${ST[S.status].l}”, tocá de nuevo para quitar el filtro` : ""}.` : "";
   const c = $("#content");
   if (S.err) { c.innerHTML = `<div class="state"><h3>${esc(S.err.t)}</h3><p>${esc(S.err.d)}</p><button class="btn" data-act="reload">Actualizar</button></div>`; return; }
   if (!S.loaded) { c.innerHTML = `<div class="state"><h3>Cargando posteos…</h3><p>Trayendo la última versión desde GitHub.</p></div>`; return; }
-  if (!S.posts.length) { c.innerHTML = `<div class="state"><h3>Todavía no hay posteos cargados</h3><p>Cada posteo lleva formato, los copys de Instagram (ES) y LinkedIn (EN) y los links de Drive a las piezas.</p>${isEdit() ? '<button class="btn lime" data-act="new">+ Cargar el primero</button>' : ""}</div>`; return; }
-  const shown = list.filter(p => S.status === "all" || p.status === S.status);
+  if (!S.posts.length) { c.innerHTML = `<div class="state"><h3>Todavía no hay posteos cargados</h3><p>Cada posteo lleva formato, canales, copys y los links de Drive a las piezas.</p><button class="btn lime" data-act="new">+ Cargar el primero</button></div>`; return; }
+  const shown = list.filter(p => S.status === "all" || stOf(p) === S.status);
   if (!shown.length) { c.innerHTML = `<div class="state"><h3>Nada para mostrar con estos filtros</h3><p>Probá otro canal o quitá el filtro de estado.</p></div>`; return; }
   c.innerHTML = ORDER.map(k => {
-    const ps = shown.filter(p => (ST[p.status] ? p.status : "borrador") === k); if (!ps.length) return "";
+    const ps = shown.filter(p => stOf(p) === k); if (!ps.length) return "";
     const s = ST[k];
     return `<section class="group"><div class="group-h"><h3 style="--c:var(${s.c})"><i></i>${s.l}</h3><span>${ps.length} ${ps.length === 1 ? "posteo" : "posteos"} · ${GROUP_SUB[k]}</span></div><div class="cards">${ps.map(cardHTML).join("")}</div></section>`;
   }).join("");
 }
-function thumbHTML(u, cls = "") {
+function thumbHTML(u) {
   const t = thumbUrl(u);
-  if (t) return `<img class="${cls}" src="${esc(t)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'ph',textContent:'Sin acceso a la miniatura'}))">`;
+  if (t) return `<img src="${esc(t)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'ph',textContent:'Sin acceso a la miniatura'}))">`;
   return `<div class="ph">${isFolder(u) ? "Carpeta de Drive" : "Link sin vista previa"}</div>`;
 }
+const chansHTML = p => `<span class="chans">${(p.channels || []).filter(k => CH[k]).map(k => `<span class="chan">${CH[k].s}</span>`).join("")}</span>`;
 function cardHTML(p) {
-  const st = ST[p.status] || ST.borrador; const ms = mediaList(p); const d = parse(p.date);
-  const excerpt = (S.ch === "li" ? p.copyEn : p.copyEs) || p.copyEn || p.copyEs || "";
+  const st = ST[stOf(p)]; const ms = mediaList(p); const d = parse(p.date);
+  const firstCh = S.ch !== "all" ? S.ch : (p.channels || [])[0] || "ig";
+  const excerpt = copyFor(p, firstCh) || p.copyEs || p.copyEn || "";
   return `<button class="card" data-open="${esc(p.id)}">
     <div class="thumb">${ms.length ? thumbHTML(ms[0]) : `<div class="ph"><span class="fmt-big">${esc(p.format || "Posteo")}</span>${safeUrl(p.driveUrl) ? "Pieza en Drive" : "Sin pieza cargada"}</div>`}
-      <div class="badges"><span class="fmt">${esc(p.format || "—")}</span><span class="pill" style="--c:var(${st.c})">${st.l}</span></div>
+      <div class="badges"><span class="fmt">${esc(p.format || "—")}</span>${isEdit() ? `<span class="pill" style="--c:var(${st.c})">${st.l}</span>` : ""}</div>
       ${ms.length > 1 ? `<span class="count">${ms.length} piezas</span>` : ""}
     </div>
     <div class="card-b">
-      <div class="when">${d ? `<span class="date-tag">Sale el ${fmtDay.format(d)}</span>` : ""}<span class="chans">${(p.channels || []).map(c => `<span class="chan">${c === "ig" ? "IG" : "IN"}</span>`).join("")}</span></div>
+      <div class="when">${d ? `<span class="date-tag">Sale el ${fmtDay.format(d)}</span>` : ""}${chansHTML(p)}</div>
       <h4>${esc(p.title || "Sin título")}</h4>
       <p>${esc(excerpt)}</p>
     </div></button>`;
@@ -171,10 +191,15 @@ function cardHTML(p) {
 
 /* ---------- Panel del posteo ---------- */
 const current = () => S.isNew ? S.draft : S.posts.find(p => p.id === S.openId);
-function openPost(id) { S.openId = id; S.editing = false; S.isNew = false; S.mi = 0; S.confirmDel = false; S.tab = S.ch === "li" ? "li" : "ig"; history.replaceState(null, "", "#" + id); renderDrawer(); showDrawer(true); }
+function openPost(id) {
+  S.openId = id; S.editing = false; S.isNew = false; S.mi = 0; S.confirmDel = false;
+  const p = S.posts.find(x => x.id === id); const chs = (p && p.channels) || [];
+  S.tab = S.ch !== "all" && chs.includes(S.ch) ? S.ch : (chs[0] || "ig");
+  history.replaceState(null, "", "#" + id); renderDrawer(); showDrawer(true);
+}
 function openNew() {
   const id = newId(); S.openId = id; S.isNew = true; S.editing = true; S.confirmDel = false; S.mi = 0;
-  S.draft = { id, title: "", date: "", format: "Reel", channels: ["ig", "li"], copyEs: "", copyEn: "", driveUrl: "", media: [], note: "", status: "borrador" };
+  S.draft = { id, title: "", date: "", format: "Reel", channels: ["ig", "li"], copyEs: "", copyEn: "", copyTt: "", driveUrl: "", media: [], note: "", status: "revision" };
   renderDrawer(); showDrawer(true); setTimeout(() => $("#f-title")?.focus(), 250);
 }
 function closeDrawer() { S.openId = null; S.editing = false; S.draft = null; S.isNew = false; showDrawer(false); history.replaceState(null, "", location.pathname + location.search); }
@@ -183,10 +208,10 @@ function showDrawer(on) { $("#drawer").classList.toggle("on", on); $("#scrim").c
 function renderDrawer() {
   const dr = $("#drawer"); const p = S.editing ? S.draft : current();
   if (!p) { dr.innerHTML = S.openId && S.loaded ? `<div class="d-head"><div class="grow"><h2>Este posteo ya no existe</h2></div><button class="iconbtn" data-act="close" aria-label="Cerrar">✕</button></div>` : ""; return; }
-  const st = ST[p.status] || ST.borrador; const d = parse(p.date);
+  const st = ST[stOf(p)]; const d = parse(p.date);
   dr.innerHTML = `<div class="d-head"><div class="grow">
       <h2>${S.editing ? (S.isNew ? "Nuevo posteo" : "Editando posteo") : esc(p.title || "Sin título")}</h2>
-      <div class="meta"><span class="fmt">${esc(p.format || "—")}</span><span class="pill" style="--c:var(${st.c})">${st.l}</span>${d ? `<span class="date-tag">Sale el ${fmtDay.format(d)}</span>` : ""}</div>
+      <div class="meta"><span class="fmt">${esc(p.format || "—")}</span>${isEdit() ? `<span class="pill" style="--c:var(${st.c})">${st.l}</span>` : ""}${chansHTML(p)}${d ? `<span class="date-tag">Sale el ${fmtDay.format(d)}</span>` : ""}</div>
     </div>
     ${!S.editing && isEdit() ? `<button class="btn sm" data-act="edit">Editar</button>` : ""}
     <button class="iconbtn" data-act="close" aria-label="Cerrar">✕</button></div>
@@ -212,27 +237,31 @@ function mediaPanel(p) {
     ${u && embedUrl(u) ? `<p class="hint">Si la vista previa pide permiso, iniciá sesión con tu cuenta de Glofy en este navegador.</p>` : ""}</div>`;
 }
 function copyPanel(p) {
-  const ch = p.channels || []; const t = S.tab; const text = t === "ig" ? p.copyEs : p.copyEn; const n = (text || "").length;
-  return `<div class="panel"><div class="tabs" role="tablist">${[["ig", "Instagram", "ES"], ["li", "LinkedIn", "EN"]].map(([k, l, lang]) => `<button role="tab" aria-selected="${t === k}" data-tab="${k}">${l}<span class="lang">${lang}</span></button>`).join("")}</div>
-    ${!ch.includes(t) ? `<p class="hint" style="margin:0 0 10px">Este posteo no está marcado para ${t === "ig" ? "Instagram" : "LinkedIn"}.</p>` : ""}
-    ${text ? `<p class="copy">${linkify(text)}</p>` : `<p class="copy empty-copy">Sin copy para ${t === "ig" ? "Instagram" : "LinkedIn"}.</p>`}
+  const chs = (p.channels || []).filter(k => CH[k]); const tabs = chs.length ? chs : ["ig", "li"];
+  const t = tabs.includes(S.tab) ? S.tab : tabs[0]; const text = copyFor(p, t); const n = text.length;
+  const ttShared = t === "tt" && !p.copyTt && p.copyEs;
+  return `<div class="panel"><div class="tabs" role="tablist">${tabs.map(k => `<button role="tab" aria-selected="${t === k}" data-tab="${k}">${CH[k].l}<span class="lang">${CH[k].lang}</span></button>`).join("")}</div>
+    ${ttShared ? `<p class="hint" style="margin:0 0 10px">Usa el mismo copy que Instagram.</p>` : ""}
+    ${text ? `<p class="copy">${linkify(text)}</p>` : `<p class="copy empty-copy">Sin copy para ${CH[t].l}.</p>`}
     <div class="copy-foot"><span class="cnt mono ${n > LIMITS[t] ? "over" : ""}">${n.toLocaleString("es-AR")} / ${LIMITS[t].toLocaleString("es-AR")} caracteres</span><span class="grow"></span>${text ? `<button class="btn sm" data-act="copy">Copiar copy</button>` : ""}</div></div>`;
 }
 const notePanel = p => p.note ? `<div class="panel"><h3>Nota de Comms</h3><p class="note">${esc(p.note)}</p></div>` : "";
-const statusPanel = p => `<div class="panel"><h3>Estado</h3><div class="row">${STATUSES.filter(s => s.k !== p.status).map(s => `<button class="btn sm" data-setst="${s.k}" ${S.busy ? "disabled" : ""}>Mover a ${s.l}</button>`).join("")}</div></div>`;
+const statusPanel = p => `<div class="panel"><h3>Estado</h3><div class="row">${STATUSES.filter(s => s.k !== stOf(p)).map(s => `<button class="btn sm" data-setst="${s.k}" ${S.busy ? "disabled" : ""}>Mover a ${s.l}</button>`).join("")}</div>${stOf(p) !== "revision" ? `<p class="hint">Gerencia solo ve los posteos En revisión.</p>` : ""}</div>`;
 const checksPanel = p => `<div class="panel"><h3>Matriz de comunicación 2026</h3><div class="checks">${matrixChecks(p).map(c => `<div class="${c.ok ? "" : "warn"}"><i></i><span>${esc(c.t)}</span></div>`).join("")}</div></div>`;
 
 function formHTML(p) {
+  const chs = p.channels || [];
   return `<div class="panel"><div class="form">
     <div class="field full"><label for="f-title">Nombre interno</label><input id="f-title" value="${esc(p.title)}" placeholder="Ej.: Reel costo por token"></div>
     <div class="field"><label for="f-format">Formato</label><select id="f-format">${FORMATS.map(f => `<option${f === p.format ? " selected" : ""}>${f}</option>`).join("")}</select></div>
-    <div class="field"><label for="f-status">Estado</label><select id="f-status">${STATUSES.map(s => `<option value="${s.k}"${s.k === p.status ? " selected" : ""}>${s.l}</option>`).join("")}</select></div>
-    <div class="field"><span class="lbl">Canales</span><div class="checkrow"><label><input type="checkbox" id="f-ig" ${(p.channels || []).includes("ig") ? "checked" : ""}> Instagram</label><label><input type="checkbox" id="f-li" ${(p.channels || []).includes("li") ? "checked" : ""}> LinkedIn</label></div></div>
+    <div class="field"><label for="f-status">Estado</label><select id="f-status">${STATUSES.map(s => `<option value="${s.k}"${s.k === stOf(p) ? " selected" : ""}>${s.l}</option>`).join("")}</select></div>
+    <div class="field"><span class="lbl">Se publica en</span><div class="checkrow">${CHANNELS.map(c => `<label><input type="checkbox" id="ch-${c.k}" ${chs.includes(c.k) ? "checked" : ""}> ${c.l}</label>`).join("")}</div></div>
     <div class="field"><label for="f-date">Fecha de salida (opcional)</label><input id="f-date" type="date" value="${esc(p.date)}"></div>
     <div class="field full"><label for="f-media">Links a las piezas en Drive</label><textarea id="f-media" class="short" placeholder="Un link por línea, en orden. Para sliders, una placa por línea.">${esc((p.media || []).join("\n"))}</textarea><span class="sub">Usá el link de cada archivo (Compartir → Copiar vínculo). La vista previa aparece a la izquierda.</span></div>
     <div class="field full"><label for="f-drive">Carpeta del posteo (opcional)</label><input id="f-drive" type="url" value="${esc(p.driveUrl)}" placeholder="https://drive.google.com/drive/folders/…"></div>
     <div class="field full"><label for="f-es">Copy Instagram · ES</label><textarea id="f-es">${esc(p.copyEs)}</textarea><span class="sub mono" id="c-es"></span></div>
     <div class="field full"><label for="f-en">Copy LinkedIn · EN</label><textarea id="f-en">${esc(p.copyEn)}</textarea><span class="sub mono" id="c-en"></span></div>
+    <div class="field full" id="tt-wrap" ${chs.includes("tt") ? "" : "hidden"}><label for="f-tt">Copy TikTok · ES (opcional)</label><textarea id="f-tt" class="short" placeholder="Si lo dejás vacío, se usa el copy de Instagram.">${esc(p.copyTt)}</textarea><span class="sub mono" id="c-tt"></span></div>
     <div class="field full"><label for="f-note">Nota para gerencia (opcional)</label><textarea id="f-note" class="short" placeholder="Contexto que ayude a revisar: objetivo, fuente del dato, qué cambió.">${esc(p.note)}</textarea></div>
   </div></div>`;
 }
@@ -243,25 +272,33 @@ function footHTML() {
 function readForm() {
   const d = S.draft; if (!d || !$("#f-title")) return d;
   d.title = $("#f-title").value.trim(); d.format = $("#f-format").value; d.status = $("#f-status").value; d.date = $("#f-date").value;
-  d.channels = [$("#f-ig").checked && "ig", $("#f-li").checked && "li"].filter(Boolean);
+  d.channels = CHANNELS.map(c => $("#ch-" + c.k).checked && c.k).filter(Boolean);
   d.media = $("#f-media").value.split(/\n+/).map(s => s.trim()).filter(Boolean);
-  d.driveUrl = $("#f-drive").value.trim(); d.copyEs = $("#f-es").value; d.copyEn = $("#f-en").value; d.note = $("#f-note").value.trim();
+  d.driveUrl = $("#f-drive").value.trim(); d.copyEs = $("#f-es").value; d.copyEn = $("#f-en").value; d.copyTt = $("#f-tt").value; d.note = $("#f-note").value.trim();
   return d;
 }
-function updCounters() { [["es", "ig"], ["en", "li"]].forEach(([f, k]) => { const el = $("#c-" + f), ta = $("#f-" + f); if (el && ta) { const n = ta.value.length; el.textContent = `${n.toLocaleString("es-AR")} / ${LIMITS[k].toLocaleString("es-AR")} caracteres`; el.style.color = n > LIMITS[k] ? "var(--st-cambios)" : ""; } }); }
+function updCounters() {
+  [["es", "ig"], ["en", "li"], ["tt", "tt"]].forEach(([f, k]) => {
+    const el = $("#c-" + f), ta = $("#f-" + f); if (!el || !ta) return;
+    const n = (f === "tt" && !ta.value ? ($("#f-es")?.value || "") : ta.value).length;
+    el.textContent = `${n.toLocaleString("es-AR")} / ${LIMITS[k].toLocaleString("es-AR")} caracteres${f === "tt" && !ta.value ? " (copy de Instagram)" : ""}`;
+    el.style.color = n > LIMITS[k] ? "var(--st-cambios)" : "";
+  });
+}
 function refreshMediaPreview() { readForm(); const col = document.querySelector(".d-body .d-col"); if (col) col.innerHTML = mediaPanel(S.draft); }
 
 /* ---------- Acciones de edición ---------- */
 async function save() {
   const d = readForm(); if (!d) return;
   if (!d.title) { toast("Poné un <b>nombre interno</b> para identificar el posteo."); $("#f-title")?.focus(); return; }
+  if (!d.channels.length) { toast("Marcá al menos <b>un canal</b>."); return; }
   const bad = d.media.filter(u => !safeUrl(u)); if (bad.length) { toast("Cada link tiene que empezar con <b>https://</b>."); $("#f-media")?.focus(); return; }
   S.busy = true; document.querySelector(".d-foot").outerHTML = footHTML();
   const now = new Date().toISOString();
-  const post = { id: d.id, title: d.title, format: d.format, status: d.status, channels: d.channels, date: d.date || "", media: d.media, driveUrl: d.driveUrl, copyEs: d.copyEs, copyEn: d.copyEn, note: d.note, updatedAt: now, createdAt: d.createdAt || now };
+  const post = { id: d.id, title: d.title, format: d.format, status: d.status, channels: d.channels, date: d.date || "", media: d.media, driveUrl: d.driveUrl, copyEs: d.copyEs, copyEn: d.copyEn, copyTt: d.copyTt || "", note: d.note, updatedAt: now, createdAt: d.createdAt || now };
   const wasNew = S.isNew;
   try {
-    await mutate(ps => wasNew ? [...ps, post] : ps.map(p => p.id === post.id ? post : p), `${wasNew ? "Nuevo" : "Edita"} posteo: ${post.title}`);
+    await mutate(ps => wasNew ? [...ps, post] : ps.map(p => p.id === post.id ? { ...p, ...post, createdAt: p.createdAt || post.createdAt } : p), `${wasNew ? "Nuevo" : "Edita"} posteo: ${post.title}`);
     toast(wasNew ? "Posteo <b>creado</b>" : "Cambios <b>guardados</b>");
     S.isNew = false; S.editing = false; S.draft = null;
   } catch (e) { toast(saveErr(e)); }
@@ -293,7 +330,7 @@ function renderConnect(msg) {
     </ol>
     <div class="field"><label for="tok">Token</label><input id="tok" type="password" autocomplete="off" placeholder="github_pat_…"></div>
     ${msg ? `<p class="err">${esc(msg)}</p>` : ""}
-    <div class="row" style="margin-top:14px"><button class="btn lime" data-act="connect">Conectar</button><a class="btn ghost" href="./">Ver como gerencia</a></div>
+    <div class="row" style="margin-top:14px"><button class="btn lime" data-act="connect">Conectar</button><a class="btn ghost" href="./">Ver dashboard de gerencia</a></div>
     <p class="hint">El token queda guardado solo en este navegador.</p></div>`;
   $("#pipeline").innerHTML = ""; $("#scopeNote").textContent = ""; $("#alert").innerHTML = "";
 }
@@ -334,7 +371,7 @@ document.addEventListener("click", e => {
     case "close": closeDrawer(); break;
     case "reload": S.err = null; render(); load(); break;
     case "connect": connect(); break;
-    case "edit": S.draft = JSON.parse(JSON.stringify(current())); S.draft.media = S.draft.media || []; S.editing = true; renderDrawer(); break;
+    case "edit": S.draft = JSON.parse(JSON.stringify(current())); S.draft.media = S.draft.media || []; S.draft.status = stOf(S.draft); S.editing = true; renderDrawer(); break;
     case "cancel": if (S.isNew) closeDrawer(); else { S.editing = false; S.draft = null; S.confirmDel = false; renderDrawer(); } break;
     case "save": save(); break;
     case "del": S.confirmDel = true; document.querySelector(".d-foot").outerHTML = footHTML(); break;
@@ -342,7 +379,7 @@ document.addEventListener("click", e => {
     case "delyes": delPost(); break;
     case "mprev": case "mnext": { if (S.editing) readForm(); const n = mediaList(p).length; S.mi = (S.mi + (a === "mnext" ? 1 : -1) + n) % n; renderDrawer(); break; }
     case "copy": {
-      const txt = S.tab === "ig" ? p.copyEs : p.copyEn;
+      const txt = copyFor(p, S.tab);
       navigator.clipboard.writeText(txt).then(() => toast("Copy <b>copiado</b>")).catch(() => { const el = document.querySelector(".copy"); const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("Texto seleccionado. Copialo con Ctrl/Cmd + C."); });
       break;
     }
@@ -350,9 +387,10 @@ document.addEventListener("click", e => {
 });
 let mediaT;
 document.addEventListener("input", e => {
-  if (e.target.id === "f-es" || e.target.id === "f-en") updCounters();
+  if (["f-es", "f-en", "f-tt"].includes(e.target.id)) updCounters();
   if (e.target.id === "f-media") { clearTimeout(mediaT); mediaT = setTimeout(() => { S.mi = 0; refreshMediaPreview(); }, 500); }
 });
+document.addEventListener("change", e => { if (e.target.id === "ch-tt") { $("#tt-wrap").hidden = !e.target.checked; updCounters(); } });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && S.openId && !S.editing) closeDrawer(); if (e.key === "Enter" && e.target.id === "tok") connect(); });
 $("#scrim").addEventListener("click", () => { if (!S.editing) closeDrawer(); });
 $("#refreshBtn").addEventListener("click", () => load());
@@ -365,5 +403,5 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
 render();
 (async () => {
   if (isEdit()) { if (!S.token) { $("#role").innerHTML = "Editor <b>Comms</b>"; renderConnect(); return; } bootEdit(); }
-  else { $("#role").innerHTML = "Vista <b>Gerencia</b>"; await load(); }
+  else { $("#role").innerHTML = "Dashboard <b>Gerencia</b>"; await load(); }
 })();

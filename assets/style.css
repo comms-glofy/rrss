@@ -1,4 +1,4 @@
-/* Glofy · Calendario RRSS — estilos compartidos (vista gerencia + editor) */
+/* Glofy · Dashboard RRSS — estilos compartidos (vista gerencia + editor) */
 :root{
   --bg:#ededed; --surface:#ffffff; --surface-2:#e1e1e1; --fg:#212121; --muted:#5d5e55; --line:#d3d4cb;
   --brand:#212121; --brand-2:#383838; --lime:#ceff00; --on-lime:#212121; --accent-text:#4a5d00;
@@ -61,7 +61,7 @@ main{padding-block:22px 64px}
 
 /* Pipeline */
 .pipeline:empty{display:none}
-.pipeline{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:22px}
+.pipeline{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:22px}
 .stage{background:var(--surface);border:0;text-align:left;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
 .stage:hover{background:color-mix(in srgb,var(--surface) 92%,var(--fg))}
 .stage .n{font-size:26px;font-weight:800;letter-spacing:-.02em;line-height:1.1;font-variant-numeric:tabular-nums}
@@ -184,7 +184,7 @@ main{padding-block:22px 64px}
 
 @media (max-width:860px){.d-body{grid-template-columns:minmax(0,1fr)}.viewer{max-height:none}}
 @media (max-width:640px){
-  .pipeline{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .pipeline{grid-template-columns:repeat(2,minmax(0,1fr))}
   .toolbar h2{font-size:21px}
   .topbar .sep,.topbar h1{display:none}
   .form{grid-template-columns:minmax(0,1fr)}
@@ -192,3 +192,4 @@ main{padding-block:22px 64px}
   .cards{grid-template-columns:minmax(0,1fr)}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
