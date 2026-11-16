@@ -1,10 +1,14 @@
-# Calendario RRSS · Glofy
+# Dashboard RRSS · Glofy
 
-Próximos posteos de Instagram (ES) y LinkedIn (EN) de Glofy.
+Próximos posteos de Instagram, LinkedIn y TikTok de Glofy.
 
-- **Vista de gerencia (solo lectura):** https://comms-glofy.github.io/rrss/
+- **Dashboard de gerencia:** https://comms-glofy.github.io/rrss/ (solo muestra lo que está *En revisión*)
 - **Editor de Comms:** https://comms-glofy.github.io/rrss/editor.html
 
-Los datos viven en `data/posts.json`. El editor los guarda con la API de GitHub usando un
-token fine-grained con permiso *Contents: Read and write* sobre este repo (queda guardado solo
-en el navegador de quien edita). Las vistas previas se toman de los links de Drive de cada pieza.
+## Cómo funciona
+- Los datos viven en `data/posts.json`.
+- Comms carga y edita los posteos desde el editor, que guarda con la API de GitHub usando un token
+  fine-grained (*Contents: Read and write* sobre este repo). El token queda solo en el navegador de quien edita.
+- Gerencia entra al dashboard, revisa y manda el feedback por Slack. Comms después mueve cada posteo
+  a *Cambios pedidos*, *Aprobado* o *Publicado*; desde ese momento deja de figurar en el dashboard.
+- Las vistas previas se toman de los links de Drive de cada pieza.
